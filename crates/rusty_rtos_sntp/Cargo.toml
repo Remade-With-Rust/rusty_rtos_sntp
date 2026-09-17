@@ -1,0 +1,25 @@
+[package]
+name = "rusty_rtos_sntp"
+description = "coreSNTP remade in Rust: the SNTPv4 packet codec and its clock arithmetic, diffed against the C over 160 trace lines including the 2036 era wrap. Integer-only, zero allocation, no_std, forbid(unsafe). The client state machine is not written yet."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+readme = "../../README.md"
+documentation = "https://docs.rs/rusty_rtos_sntp"
+keywords = ["rtos", "freertos", "embedded", "no-std", "remade-with-rust"]
+categories = ["embedded", "no-std", "os"]
+
+[features]
+default = ["std"]
+std = ["rusty_rtos_sntp-core/std"]
+alloc = ["rusty_rtos_sntp-core/alloc"]
+
+[dependencies]
+rusty_rtos_sntp-core = { workspace = true }
+
+[lints]
+workspace = true
