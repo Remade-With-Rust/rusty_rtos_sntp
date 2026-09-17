@@ -27,3 +27,16 @@ cc -O2 -g -Wall -Wextra -DSNTP_DO_NOT_USE_CUSTOM_CONFIG \
 
 "$here/sntp_driver" > "$here/sntp.trace"
 echo "wrote $(wc -l < "$here/sntp.trace") lines to $here/sntp.trace"
+
+# The client differential's C arm. core_sntp_client.c pulls in the serializer,
+# so both translation units are compiled together.
+client="$lib/source/core_sntp_client.c"
+[ -f "$client" ] || { echo "no core_sntp_client.c at $client" >&2; exit 1; }
+
+cc -O2 -g -w -DSNTP_DO_NOT_USE_CUSTOM_CONFIG \
+   -I "$lib/source/include" \
+   -o "$here/client_driver" \
+   "$src" "$client" "$here/client_driver.c"
+
+"$here/client_driver" > "$here/client.trace"
+echo "wrote $(wc -l < "$here/client.trace") lines to $here/client.trace"

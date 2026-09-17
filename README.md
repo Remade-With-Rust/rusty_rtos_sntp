@@ -4,17 +4,19 @@
 [![docs.rs](https://docs.rs/rusty_rtos_sntp/badge.svg)](https://docs.rs/rusty_rtos_sntp)
 [![license](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-A `no_std` SNTPv4 packet codec and clock arithmetic, the Kairos remake of
-coreSNTP. MIT OR Apache-2.0.
+A `no_std` SNTPv4 client, the Kairos remake of coreSNTP. MIT OR Apache-2.0.
 
 **K7's third library**, and the first one whose hardest defect is dated: SNTP's
 seconds field wraps on **7 February 2036**, and a client that gets that wrong is
 correct until then and silently wrong afterwards.
 
-- **Proven**: `core_sntp_serializer.c` — the packet codec, the response
-  validation, the clock-offset arithmetic across the era wrap, the poll-interval
-  calculation and the UNIX time conversion. Diffed against the C as a 160-line
-  trace, call for call.
+- **Proven, the serializer**: the packet codec, the response validation, the
+  clock-offset arithmetic across the era wrap, the poll-interval calculation and
+  the UNIX time conversion. Diffed against the C as a 160-line trace, 75 calls.
+- **Proven, the client**: `Sntp_Init`, `Sntp_SendTimeRequest` and
+  `Sntp_ReceiveTimeResponse` over a UDP transport, diffed **callback for
+  callback** across 23 scenarios as a 549-line trace — every clock read, every
+  datagram, every rotation, and the context state after each one.
 - **Integer arithmetic, on purpose.** coreSNTP targets parts with no
   floating-point unit, where an `f64` divide is a soft-float call on the receive
   path of every poll. It is also what makes this differentiable at all: two
@@ -24,9 +26,13 @@ correct until then and silently wrong afterwards.
   fed over UDP, which is connectionless, so anything that can guess a port can
   deliver 48 bytes of its choosing.
 
-**Known gaps.** `core_sntp_client.c` — the state machine that drives a UDP
-transport and an authentication interface — is **not written**. This crate
-builds and reads packets; it does not own a socket. That is the next milestone.
+**Known gaps.** None in coreSNTP's surface. This crate does not own a socket
+and never will — it takes a transport, as the C does, so an application that
+already has one can hand it over. `rusty_rtos_tcp` will be able to supply it.
+
+**Two defects were found in the C while building this**, both reproduced
+faithfully rather than fixed, both written up for filing. See
+[The client](#the-client).
 
 - This package's plan: [docs/plans/rusty_rtos_sntp.md](https://github.com/Remade-With-Rust/rusty_rtos_sntp/blob/main/docs/plans/rusty_rtos_sntp.md)
 - Every number: [docs/LEDGER.md](https://github.com/Remade-With-Rust/rusty_rtos_sntp/blob/main/docs/LEDGER.md)
@@ -45,9 +51,10 @@ the C kernel's own trace.
 
 ## Status
 
-**The serializer is built and proven; the client state machine is not.** 160
-trace lines agree with `core_sntp_serializer.c` at the pinned v2.0.0, including
-the 2036 era wrap. 14 tests. Nothing has run on a chip.
+**Both halves are built and proven.** 160 trace lines agree with
+`core_sntp_serializer.c` and 549 more with `core_sntp_client.c`, at the pinned
+v2.0.0 — including the 2036 era wrap and the full callback sequence of 23 client
+scenarios. 22 tests. Nothing has run on a chip.
 
 ## What it is
 
@@ -120,6 +127,98 @@ which the special case above has already returned on. Both are now pinned by
 unit tests, because an accidental property nobody checks is one edit away from
 being false.
 
+## The client
+
+**549 trace lines across 23 scenarios agree with `core_sntp_client.c`**,
+callback for callback.
+
+```sh
+cargo test -p rusty_rtos_sntp-core --test client
+```
+
+The serializer is a pure function: give it bytes, compare bytes. The client is a
+**state machine over five callbacks** — resolve a name, read the clock, adjust
+the clock, send a datagram, receive one — and its observable behaviour is not
+only what it returns but *which callbacks it calls, in what order, with what
+arguments*. A transcription that produced the right status while reading the
+clock a different number of times would be a different library, and a
+differential that only checked statuses would bless it. So every callback is
+scripted and logged on both sides, and the context state is printed after every
+action, because where a state machine leaves itself is part of what it did.
+
+```rust
+use rusty_rtos_sntp::{Client, Reception, ServerInfo};
+
+let servers = [ServerInfo::new("0.pool.ntp.org"), ServerInfo::new("1.pool.ntp.org")];
+let mut buffer = [0u8; 48];
+let mut client = Client::new(&servers, &mut buffer, 5_000)?;
+
+client.send_time_request(&mut host, random_u32, 1_000)?;
+
+match client.receive_time_response(&mut host, 1_000)? {
+    Reception::Synchronised => {}          // the clock was adjusted
+    Reception::NothingYet   => {}          // call again
+    Reception::Rejected     => {}          // already rotated to the next server
+    Reception::TimedOut     => {}          // already rotated
+}
+```
+
+`host` implements `SntpHost`: five methods where the C takes five function
+pointers and two opaque user contexts. One `&mut self` says the same thing.
+Authentication stays a separate optional trait, because *configured* and *not
+configured* behave differently — see below.
+
+**A context that cannot be uninitialised.** The C's `validateContext` runs on
+every call and can return `SntpErrorContextNotInitialized`, because a
+`SntpContext_t` is a struct the caller allocates and might never have passed to
+`Sntp_Init`. `Client::new` is the only way to obtain a `Client`, so that status
+has no Rust equivalent and is in no error type here.
+
+**Poison-proven on nine behaviours, all caught:** the server rotation wrapping
+rather than stopping, the Kiss-o'-Death replay rule in both directions, DNS
+being re-resolved on every request rather than cached, the response timeout
+being checked before the block time, a partial send being accepted, the packet
+size surviving a failed authentication, the retry window being opened by its own
+clock read, and — see below — "fixing" the C's arithmetic.
+
+### The replay-protection asymmetry
+
+After a response it can use, the client clears its stored request timestamp, so
+a replayed request's later response cannot be serviced twice. After a
+**Kiss-o'-Death** it clears it *only when authentication is configured*.
+
+Without authentication anyone can forge a rejection, and clearing on a forged one
+would make the genuine response fail its originate check — turning a spoofed
+packet into a denial of service. It is one `if` in the C and it is the most
+security-relevant line in the file, so it has its own test: two scenarios that
+must disagree.
+
+### Two defects found in the C
+
+Both are transcribed **exactly as they are**, because a differential whose arm
+"fixes" its oracle is measuring two different libraries. Both are written up in
+`kairos-upstream/drafts/coresntp-elapsed-time-underflow.md` for the owner to
+file.
+
+1. **`calculateElapsedTimeMs` underflows when the clock steps backwards.** Two
+   readings in the same second with the newer one earlier make it subtract on a
+   `uint64_t` that is still zero: half a second backwards gives
+   `0 - 499` = 1.8 × 10¹⁹ ms. Every caller compares that against a timeout, so
+   the client reports a response timeout for a request that has not timed out
+   and rotates away from a working server. A clock stepping backwards is not
+   contrived — it is what a host does when *this library* hands it a negative
+   offset. Our transcription uses an explicit `wrapping_sub`, and a poison
+   confirms that making it saturate **fails** the differential.
+
+2. **The retry loops can spin for ever.** Both exit only when a deadline
+   computed from the host's own clock is met, so a clock that does not make
+   progress means the call never returns. An *oscillating* clock is the
+   realistic trigger: elapsed times alternate rather than accumulate, and
+   neither deadline is ever reached. `blockTimeMs` is documented as the maximum
+   block time and does not bound it. **Our own gate found this by hanging**, and
+   the bound is now enforced from inside the test host so the next one fails by
+   name instead.
+
 ## The no-panic gate
 
 A time client is fed by strangers, and worse than most: SNTP runs over UDP,
@@ -137,6 +236,11 @@ reject those, and every one of those checks runs on bytes an attacker picked.
 | every buffer size | serializing into 0..96 bytes, 32 samples each |
 | every poll interval | both `u16` axes swept in full against a spread of the other |
 | every timestamp | 100,000 random conversions plus a 2,000-wide window around the era boundary |
+| **a hostile host** | 39 seeds x 40 rounds of send-and-receive against a transport that lies about how much it moved (including more than it was given), a DNS that fails one time in eight, and a clock whose fractions are random |
+| **a hostile authenticator** | the same, plus codes of `u16::MAX` and of exactly the spare buffer |
+| **every buffer size** | 0..96, each driven through a full round |
+| **a clock running backwards** | half a second back on every reading, then recovering |
+| **rotation** | three servers, seven timeouts, asserting the walk wraps |
 
 **The round trip is the property that spans both halves.**
 `Sntp_SerializeRequest` **mutates** the timestamp it is given — it ORs random

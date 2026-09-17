@@ -32,6 +32,13 @@ pub mod types;
 /// `core_sntp_serializer.c`: the SNTPv4 packet codec and its arithmetic.
 pub mod serializer;
 
+/// `core_sntp_client.c`: the polling client over a UDP transport.
+pub mod client;
+
+pub use client::{
+    AuthError, Authenticator, Client, InitError, NetworkError, NoAuth, ReceiveError, Reception,
+    SendError, ServerInfo, SntpHost,
+};
 pub use serializer::{
     FRACTION_VALUE_PER_MICROSECOND, KISS_OF_DEATH_CODE_LENGTH, PACKET_BASE_SIZE,
     TIME_AT_UNIX_EPOCH_SECS, UNIX_TIME_SECS_AT_SNTP_ERA_1_SMALLEST_TIME, calculate_poll_interval,

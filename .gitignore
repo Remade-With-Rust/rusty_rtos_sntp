@@ -13,3 +13,6 @@ Thumbs.db
 oracle/sntp_driver
 oracle/sntp_driver.exe
 oracle/sntp_driver.pdb
+oracle/client_driver
+oracle/client_driver.exe
+oracle/client_driver.pdb
