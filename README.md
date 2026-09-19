@@ -339,16 +339,18 @@ the C kernel's own trace. `rusty_rtos_sntp` is one of the K7 libraries: the
 SNTPv4 client, proven against coreSNTP.
 
 The family:
-[`rusty_rtos_core`](https://crates.io/crates/rusty_rtos_core),
-[`rusty_rtos_kernel`](https://crates.io/crates/rusty_rtos_kernel),
-[`rusty_rtos_port`](https://crates.io/crates/rusty_rtos_port),
-[`rusty_rtos_heap`](https://crates.io/crates/rusty_rtos_heap),
-[`rusty_rtos_json`](https://crates.io/crates/rusty_rtos_json),
-[`rusty_rtos_sntp`](https://crates.io/crates/rusty_rtos_sntp),
-[`rusty_rtos_mqtt`](https://crates.io/crates/rusty_rtos_mqtt),
-[`rusty_rtos_backoff`](https://crates.io/crates/rusty_rtos_backoff),
-`rusty_rtos-capi` and `rusty_rtos_demo`. Also check out the rest of
-**[github.com/remade-with-rust](https://github.com/remade-with-rust)**.
+[`rusty_rtos_core`](https://crates.io/crates/rusty_rtos_core) (the shared vocabulary),
+[`rusty_rtos_kernel`](https://crates.io/crates/rusty_rtos_kernel) (the scheduler),
+[`rusty_rtos_port`](https://crates.io/crates/rusty_rtos_port) (the architecture seam),
+[`rusty_rtos_heap`](https://crates.io/crates/rusty_rtos_heap) (the allocators),
+[`rusty_rtos_json`](https://github.com/Remade-With-Rust/rusty_rtos_json) (coreJSON),
+[`rusty_rtos_sntp`](https://github.com/Remade-With-Rust/rusty_rtos_sntp) (coreSNTP),
+[`rusty_rtos_mqtt`](https://github.com/Remade-With-Rust/rusty_rtos_mqtt) (coreMQTT),
+[`rusty_rtos_backoff`](https://github.com/Remade-With-Rust/rusty_rtos_backoff) (backoffAlgorithm),
+[`rusty_rtos-capi`](https://github.com/Remade-With-Rust/rusty_rtos-capi) (the C ABI) and
+[`rusty_rtos_demo`](https://github.com/Remade-With-Rust/rusty_rtos_demo) (the conformance corpus).
+The last six are on GitHub and not yet on crates.io. Also check out
+the rest of **[github.com/remade-with-rust](https://github.com/remade-with-rust)**.
 
 ## About Mata Network
 
