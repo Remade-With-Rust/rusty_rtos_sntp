@@ -6,11 +6,10 @@
 [![docs.rs](https://docs.rs/rusty_rtos_sntp/badge.svg)](https://docs.rs/rusty_rtos_sntp)
 [![license](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-A `no_std` SNTPv4 client, the Kairos remake of coreSNTP. MIT OR Apache-2.0.
-
-**K7's third library**, and the first one whose hardest defect is dated: SNTP's
-seconds field wraps on **7 February 2036**, and a client that gets that wrong is
-correct until then and silently wrong afterwards.
+A `no_std` SNTPv4 client, the Kairos remake of coreSNTP. Integer-only, and
+proven against the C across the era wrap: SNTP's seconds field rolls over on
+7 February 2036, and a client that gets that wrong is correct until then and
+silently wrong afterwards.
 
 - **Proven, the serializer**: the packet codec, the response validation, the
   clock-offset arithmetic across the era wrap, the poll-interval calculation and
