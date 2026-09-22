@@ -4,20 +4,20 @@ version = 4
 
 [[package]]
 name = "rusty_rtos_core"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e3998d3323106878db36fbc8b565cd8eb572609118fa9a04e3e14c23ff80d80"
+checksum = "1a387ececa058fe014bfcdf86851fba7eee77397fbf0fffdb15f720c082a20e7"
 
 [[package]]
 name = "rusty_rtos_sntp"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "rusty_rtos_sntp-core",
 ]
 
 [[package]]
 name = "rusty_rtos_sntp-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "rusty_rtos_core",
 ]
