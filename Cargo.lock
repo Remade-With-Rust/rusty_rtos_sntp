@@ -10,14 +10,14 @@ checksum = "10e25b7fc42fe14b8c57b02fbab467875d19d51587dbc3ab7d80fab228abcb28"
 
 [[package]]
 name = "rusty_rtos_sntp"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "rusty_rtos_sntp-core",
 ]
 
 [[package]]
 name = "rusty_rtos_sntp-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "rusty_rtos_core",
 ]
